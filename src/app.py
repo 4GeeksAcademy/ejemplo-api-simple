@@ -9,14 +9,15 @@ from flask_cors import CORS
 from utils import APIException, generate_sitemap
 from admin import setup_admin
 from models import db, User
-#from models import Person
+# from models import Person
 
 app = Flask(__name__)
 app.url_map.strict_slashes = False
 
 db_url = os.getenv("DATABASE_URL")
 if db_url is not None:
-    app.config['SQLALCHEMY_DATABASE_URI'] = db_url.replace("postgres://", "postgresql://")
+    app.config['SQLALCHEMY_DATABASE_URI'] = db_url.replace(
+        "postgres://", "postgresql://")
 else:
     app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:////tmp/test.db"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -27,14 +28,19 @@ CORS(app)
 setup_admin(app)
 
 # Handle/serialize errors like a JSON object
+
+
 @app.errorhandler(APIException)
 def handle_invalid_usage(error):
     return jsonify(error.to_dict()), error.status_code
 
 # generate sitemap with all your endpoints
+
+
 @app.route('/')
 def sitemap():
     return generate_sitemap(app)
+
 
 @app.route('/user', methods=['GET'])
 def handle_hello():
@@ -44,6 +50,42 @@ def handle_hello():
     }
 
     return jsonify(response_body), 200
+
+mensajes = []
+
+
+@app.route('/mensajes', methods=['GET'])
+def get_mensajes():
+    return jsonify(mensajes), 200
+
+
+@app.route('/mensajes', methods=['POST'])
+def post_mensajes():
+    body = request.get_json()
+
+    if ('persona' not in body) and ('fecha' not in body) and ('mensaje' not in body):
+        return jsonify('Al body le faltan atributos'), 400
+
+    nuevo_mensaje = {
+        "id": len(mensajes),
+        "persona": body["persona"],
+        "fecha": body["fecha"],
+        "mensaje": body["mensaje"]
+    }
+
+    mensajes.append(nuevo_mensaje)
+    return jsonify(nuevo_mensaje), 200
+
+
+@app.route('/mensajes/<mensaje_id>', methods=['DELETE'])
+def delete_mensaje(mensaje_id):
+    global mensajes
+    
+    nuevos_mensajes = list(
+        filter(lambda mensaje: mensaje['id'] != int(mensaje_id), mensajes))
+    mensajes = nuevos_mensajes
+    return jsonify(mensajes), 200
+
 
 # this only runs if `$ python src/app.py` is executed
 if __name__ == '__main__':
